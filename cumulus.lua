@@ -1,4 +1,4 @@
--- title:   Cloud Control
+-- title:   Cumulus
 -- author:  Drakir & Lowcase
 -- desc:    Be Relatively Evil
 -- script:  lua
