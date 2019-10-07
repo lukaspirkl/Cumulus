@@ -1,0 +1,1 @@
+start tic80.exe %~dp0cloud.tic -code-watch %~dp0cloud.lua
