@@ -47,11 +47,21 @@ function createScreenTranslation()
 				if curX > MAP_MAX_X - MAX_X then curX = MAP_MAX_X - MAX_X end
 			end
 		end,
+
 		x = function(x)
 			return x - curX
 		end,
+
 		y = function(y)
 			return y - curY
+		end,
+
+		mapX = function(x)
+			return x + curX
+		end,
+
+		mapY = function(y)
+			return y + curY
 		end
 	}
 end
@@ -77,7 +87,7 @@ function createCloudActivator(clouds, cities)
 end
 
 function createCloud(trans)
-	local cloudFiction = 0.98
+	local cloudFriction = 0.98
 	local deactivationDistance = 10
 
 	local active = false
@@ -146,10 +156,8 @@ function createCloud(trans)
 		blow = function(startx, starty, endx, endy)
 			if not active then return end
 
-			-- TODO: There is something fishy here
-			-- blowing up and down is broken
 			local dist = distanceLineToPoint(startx, starty, endx, endy, x, y)
-			local power = (max(0, 100 - dist) * 0.0001) --+ (max(0, 10 - radius) * 0.0001)
+			local power = (max(0, 100 - dist) * 0.0001) + (max(0, 10 - radius) * 0.0001)
 			vx = (endx - startx) * power
 			vy = (endy - starty) * power
 		end,
@@ -170,8 +178,8 @@ function createCloud(trans)
 				active = false
 			end
 
-			vx = vx * cloudFiction
-			vy = vy * cloudFiction
+			vx = vx * cloudFriction
+			vy = vy * cloudFriction
 		end,
 
 		draw = function()
@@ -203,12 +211,12 @@ function createCity(trans, clouds)
 			for _, c in pairs(clouds) do
 				if c.isRaining() and distancePointToPoint(c.x(), c.y(), x, y) <= (radius + c.radius()) then
 					isUnderCloud = true
-					happiness = happiness + 0.01
+					happiness = min(20, happiness + 0.01)
 					return
 				end
 			end
 			isUnderCloud = false
-			happiness = happiness - 0.001
+			happiness = max(0, happiness - 0.001)
 		end,
 
 		draw = function()
@@ -223,22 +231,8 @@ function createCity(trans, clouds)
 	}
 end
 
-function createGameScene()
+function createMouseBlower(trans, clouds)
 	local x,y,pressed;
-	local trans = createScreenTranslation()
-	local clouds = {}
-	local cities = {}
-	local activator = createCloudActivator(clouds, cities)
-
-	-- create 10 ities
-	for i = 0, 9, 1 do
-		cities[i] = createCity(trans, clouds)
-	end
-
-	-- create 20 clouds
-	for i = 0, 19, 1 do
-		clouds[i] = createCloud(trans)
-	end
 
 	local processMouse = function()
 		local x, y, pressed = mouse()
@@ -260,25 +254,48 @@ function createGameScene()
 
 	return {
 		update = function()
+			x, y, pressed = processMouse()
+			processBlowing(trans.mapX(x), trans.mapY(y), pressed)
+		end,
+
+		draw = function()
+			if (startBlow and endBlow) then
+				line(trans.x(startBlow.x), trans.y(startBlow.y), trans.x(endBlow.x), trans.y(endBlow.y), 8)
+			end
+		end
+	}
+end
+
+function createGameScene()
+	local trans = createScreenTranslation()
+	local clouds = {}
+	local cities = {}
+	local activator = createCloudActivator(clouds, cities)
+	local mouseBlower = createMouseBlower(trans, clouds)
+
+	-- create 10 ities
+	for i = 0, 9, 1 do
+		cities[i] = createCity(trans, clouds)
+	end
+
+	-- create 20 clouds
+	for i = 0, 19, 1 do
+		clouds[i] = createCloud(trans)
+	end
+
+	return {
+		update = function()
 			trans.update()
 			activator.update()
-
-			x, y, pressed = processMouse()
-			processBlowing(x, y, pressed)
-
+			mouseBlower.update()
 			for _, c in pairs(cities) do c.update() end
 			for _, c in pairs(clouds) do c.update() end
 		end,
 		draw = function()
 			cls(2)
-
-			if (startBlow and endBlow) then
-				line(startBlow.x, startBlow.y, endBlow.x, endBlow.y, 8)
-			end
-
 			for _, c in pairs(cities) do c.draw() end
 			for _, c in pairs(clouds) do c.draw() end
-
+			mouseBlower.draw()
 			-- c = string.format("(%03i,%03i)", x, y)
 			-- print(c, 0, 0, 6)
 		end
