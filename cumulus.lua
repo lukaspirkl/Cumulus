@@ -46,24 +46,46 @@ function createScreenTranslation()
 	local curX = 0.0
 	local curY = 0.0
 	local speed = 4
+	local mouseStart
+	local currentStart
+
+	local processMouse = function()
+		local x, y, left, middle, right = mouse()
+		return (x ~= 255 and x or 0), (y ~= 255 and y or 0), right
+	end
+
 	return {
 		update = function()
+			local x,y,right = processMouse()
+			if right and not mouseStart then
+				mouseStart = {x = x, y = y}
+				currentStart = {x = curX, y = curY}
+			end
+			if right and mouseStart then
+				curX = currentStart.x + (mouseStart.x - x)
+				curY = currentStart.y + (mouseStart.y - y)
+			end
+			if not right then
+				mouseStart = nil
+			end
+
 			if btn(0) then -- UP
 				curY = curY - speed
-				if curY < 0 then curY = 0 end
 			end
 			if btn(1) then -- DOWN
 				curY = curY + speed
-				if curY > MAP_MAX_Y - MAX_Y then curY = MAP_MAX_Y - MAX_Y end
 			end
 			if btn(2) then -- LEFT
 				curX = curX - speed
-				if curX < 0 then curX = 0 end
 			end
 			if btn(3) then -- RIGHT
 				curX = curX + speed
-				if curX > MAP_MAX_X - MAX_X then curX = MAP_MAX_X - MAX_X end
 			end
+
+			if curX < 0 then curX = 0 end
+			if curY < 0 then curY = 0 end
+			if curY > MAP_MAX_Y - MAX_Y then curY = MAP_MAX_Y - MAX_Y end
+			if curX > MAP_MAX_X - MAX_X then curX = MAP_MAX_X - MAX_X end
 		end,
 
 		getCurrent = function()
