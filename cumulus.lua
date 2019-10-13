@@ -7,11 +7,11 @@
 
 sin,cos,sqrt,floor,ceil,abs,min,max,random=math.sin,math.cos,math.sqrt,math.floor,math.ceil,math.abs,math.min,math.max,math.random
 
-MAX_X = 240 - 1
-MAX_Y = 136 - 1
+MAX_X = 240
+MAX_Y = 136
 
 MAP_MAX_X = 400
-MAP_MAX_Y = 200
+MAP_MAX_Y = 300
 
 function distanceLineToPoint(x1, y1, x2, y2, xp, yp)
 	-- https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
@@ -22,12 +22,30 @@ function distancePointToPoint(x1, y1, x2, y2)
 	return sqrt(((y2-y1)^2)+((x2-x1)^2))
 end
 
+function createMiniMap(trans, cities)
+	return {
+		update = function()
+		end,
+
+		draw = function()
+			local w = (MAP_MAX_X / 10)
+			local h = (MAP_MAX_Y / 10)
+			local viewX, viewY = trans.getCurrent()
+			rect(MAX_X - w, MAX_Y - h, w, h, 15)
+			rectb((MAX_X - w) + (viewX // 10), (MAX_Y - h) + (viewY // 10), (MAX_X // 10), (MAX_Y // 10) + 1, 14)
+			for _, c in pairs(cities) do
+				pix((MAX_X - w) + (c.x() // 10), (MAX_Y - h) + (c.y() // 10), 1)
+			end
+		end
+	}
+end
+
 function createScreenTranslation()
 	local maxX = 600
 	local mayY = 300
 	local curX = 0.0
 	local curY = 0.0
-	local speed = 1
+	local speed = 4
 	return {
 		update = function()
 			if btn(0) then -- UP
@@ -46,6 +64,10 @@ function createScreenTranslation()
 				curX = curX + speed
 				if curX > MAP_MAX_X - MAX_X then curX = MAP_MAX_X - MAX_X end
 			end
+		end,
+
+		getCurrent = function()
+			return curX, curY
 		end,
 
 		x = function(x)
@@ -191,12 +213,9 @@ function createCloud(trans)
 	}
 end
 
-function createCity(trans, clouds)
+function createCity(trans, clouds, x, y)
 	local radius = 5
 	local happiness = 10.0
-	-- TODO: add some minimal distance between cities
-	local x = random(10, MAP_MAX_X - 10)
-	local y = random(10, MAP_MAX_Y - 10)
 	local isUnderCloud = false
 	return {
 		x = function()
@@ -232,7 +251,7 @@ function createCity(trans, clouds)
 end
 
 function createMouseBlower(trans, clouds)
-	local x,y,pressed;
+	local x, y, pressed, startBlow, endBlow;
 
 	local processMouse = function()
 		local x, y, pressed = mouse()
@@ -266,16 +285,42 @@ function createMouseBlower(trans, clouds)
 	}
 end
 
+function getFreeCityLocation(cities)
+	local getRandom = function()
+		-- Do not create cities in the bottom right corner (they are hidden under minimap)
+		return random(20, MAP_MAX_X - 40), random(20, MAP_MAX_Y - 40)
+	end
+
+	local isCorrect = function(x, y)
+		local ok = true
+		for _, c in pairs(cities) do
+			if distancePointToPoint(x, y, c.x(),c.y()) < 40 then
+				ok = false
+				break
+			end
+		end
+		return ok
+	end
+
+	local x, y = getRandom()
+	while not isCorrect(x, y) do
+		x, y = getRandom()
+	end
+	return x, y
+end
+
 function createGameScene()
 	local trans = createScreenTranslation()
 	local clouds = {}
 	local cities = {}
 	local activator = createCloudActivator(clouds, cities)
 	local mouseBlower = createMouseBlower(trans, clouds)
+	local minimap = createMiniMap(trans, cities)
 
-	-- create 10 ities
+	-- create 10 cities
 	for i = 0, 9, 1 do
-		cities[i] = createCity(trans, clouds)
+		local x, y = getFreeCityLocation(cities)
+		cities[i] = createCity(trans, clouds, x, y)
 	end
 
 	-- create 20 clouds
@@ -290,11 +335,13 @@ function createGameScene()
 			mouseBlower.update()
 			for _, c in pairs(cities) do c.update() end
 			for _, c in pairs(clouds) do c.update() end
+			minimap.update()
 		end,
 		draw = function()
 			cls(2)
 			for _, c in pairs(cities) do c.draw() end
 			for _, c in pairs(clouds) do c.draw() end
+			minimap.draw()
 			mouseBlower.draw()
 			-- c = string.format("(%03i,%03i)", x, y)
 			-- print(c, 0, 0, 6)
