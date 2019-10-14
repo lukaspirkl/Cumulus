@@ -228,7 +228,7 @@ function createCloud(trans)
 
 		draw = function()
 			if not active then return end
-
+			spr(2, trans.x(x) - 16, trans.y(y) - 24, 0, 1, 0, 0, 4, 2)
 			circb(trans.x(x), trans.y(y), radius, 8)
 			if raining then	print("rain", trans.x(x - 10), trans.y(y - 3)) end
 		end
@@ -261,13 +261,15 @@ function createCity(trans, clouds, x, y)
 		end,
 
 		draw = function()
-			if isUnderCloud then
-				circ(trans.x(x), trans.y(y), radius, 3)
-			else
-				circ(trans.x(x), trans.y(y), radius, 1)
-			end
+			-- if isUnderCloud then
+			-- 	circ(trans.x(x), trans.y(y), radius, 3)
+			-- else
+			-- 	circ(trans.x(x), trans.y(y), radius, 1)
+			-- end
 			rect(trans.x(x-9), trans.y(y+10), 20, 2, 6)
-			rect(trans.x(x-9), trans.y(y+10), happiness, 2, 5)
+			rect(trans.x(x-9), trans.y(y+10), happiness, 2, 11)
+
+			spr(0, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
 		end
 	}
 end
@@ -339,14 +341,14 @@ function createGameScene()
 	local mouseBlower = createMouseBlower(trans, clouds)
 	local minimap = createMiniMap(trans, cities)
 
-	-- create 10 cities
-	for i = 0, 9, 1 do
+	-- create 8 cities
+	for i = 0, 7, 1 do
 		local x, y = getFreeCityLocation(cities)
 		cities[i] = createCity(trans, clouds, x, y)
 	end
 
-	-- create 20 clouds
-	for i = 0, 19, 1 do
+	-- create 10 clouds
+	for i = 0, 9, 1 do
 		clouds[i] = createCloud(trans)
 	end
 
@@ -360,7 +362,7 @@ function createGameScene()
 			minimap.update()
 		end,
 		draw = function()
-			cls(2)
+			cls(5)
 			for _, c in pairs(cities) do c.draw() end
 			for _, c in pairs(clouds) do c.draw() end
 			minimap.draw()
