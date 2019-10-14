@@ -119,7 +119,7 @@ function createCloudActivator(clouds, cities)
 				last = time()
 				for _, c in pairs(clouds) do
 					if not c.isActive() then
-						local city = cities[random(0,#cities)]
+						local city = cities[random(1,#cities)]
 						local x, y = city.x(), city.y()
 						c.activate(random(x - 20, x + 20), random(y - 20, y + 20))
 						break
@@ -230,15 +230,25 @@ function createCloud(trans)
 			if not active then return end
 			spr(2, trans.x(x) - 16, trans.y(y) - 24, 0, 1, 0, 0, 4, 2)
 			circb(trans.x(x), trans.y(y), radius, 8)
-			if raining then	print("rain", trans.x(x - 10), trans.y(y - 3)) end
+			if raining then	print("rain", trans.x(x - 10), trans.y(y - 3), 8) end
 		end
 	}
 end
 
 function createCity(trans, clouds, x, y)
 	local radius = 5
-	local happiness = 10.0
 	local isUnderCloud = false
+
+	local happiness = 10.0
+
+	-- These two arrays should have same size
+	local badText = {"WE NEED WATER", "WE ARE DYING", "YOU ARE EVIL"}
+	local goodText = {"WE ARE SO HAPPY", "THANK YOU", "YOU ARE GOOD"}
+
+	local nextMessageTime = time() + random(5000, 10000)
+	local startMessageTime = time()
+	local displayedMessage = nil
+
 	return {
 		x = function()
 			return x
@@ -258,6 +268,21 @@ function createCity(trans, clouds, x, y)
 			end
 			isUnderCloud = false
 			happiness = max(0, happiness - 0.001)
+
+			if nextMessageTime < time() then
+				nextMessageTime = time() + random(10000, 15000)
+				startMessageTime = time()
+				if happiness < 8 then
+					displayedMessage = badText[random(1, #badText)]
+				end
+				if happiness > 13 then
+					displayedMessage = goodText[random(1, #badText)]
+				end
+			end
+
+			if startMessageTime + 3000 < time() then
+				displayedMessage = nil
+			end
 		end,
 
 		draw = function()
@@ -266,10 +291,18 @@ function createCity(trans, clouds, x, y)
 			-- else
 			-- 	circ(trans.x(x), trans.y(y), radius, 1)
 			-- end
+			spr(0, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+		end,
+
+		drawGui = function()
 			rect(trans.x(x-9), trans.y(y+10), 20, 2, 6)
 			rect(trans.x(x-9), trans.y(y+10), happiness, 2, 11)
 
-			spr(0, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+			if displayedMessage then
+				local width = print(displayedMessage, 0, -32, 0)
+				print(displayedMessage, trans.x(x) - (width / 2) + 1, trans.y(y) - 10 + 1, 0)
+				print(displayedMessage, trans.x(x) - (width / 2), trans.y(y) - 10, 13)
+			end
 		end
 	}
 end
@@ -365,8 +398,12 @@ function createGameScene()
 			cls(5)
 			for _, c in pairs(cities) do c.draw() end
 			for _, c in pairs(clouds) do c.draw() end
+
+			-- GUI
+			for _, c in pairs(cities) do c.drawGui() end
 			minimap.draw()
 			mouseBlower.draw()
+
 			-- c = string.format("(%03i,%03i)", x, y)
 			-- print(c, 0, 0, 6)
 		end
