@@ -7,11 +7,30 @@
 
 sin,cos,sqrt,floor,ceil,abs,min,max,random=math.sin,math.cos,math.sqrt,math.floor,math.ceil,math.abs,math.min,math.max,math.random
 
+-- Display size
 MAX_X = 240
 MAX_Y = 136
 
 MAP_MAX_X = 400
 MAP_MAX_Y = 300
+
+SCROLL_SPEED = 4
+
+CITY_COUNT = 10
+CLOUD_COUNT = 8
+
+HAPPINESS_DEGRADATION = 0.001
+HAPPINESS_GROWTH = 0.01
+
+CITY_MESSAGE_DURATION = 3000 --ms
+CITY_NEXT_MESSAGE_AFTER_MIN = 10000 --ms
+CITY_NEXT_MESSAGE_AFTER_MAX = 20000 --ms
+
+CLOUD_FRICTION = 0.98
+CLOUD_DISTANCE_BASED_POWER = 0.0001
+CLOUD_SIZE_BASED_POWER = 0.0001
+CLOUD_ACTIVATION_TIME = 2000 --ms
+CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE = 30
 
 function distanceLineToPoint(x1, y1, x2, y2, xp, yp)
 	-- https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
@@ -41,11 +60,9 @@ function createMiniMap(trans, cities)
 end
 
 function createScreenTranslation()
-	local maxX = 600
-	local mayY = 300
 	local curX = 0.0
 	local curY = 0.0
-	local speed = 4
+	local SCROLL_SPEED = 4
 	local mouseStart
 	local currentStart
 
@@ -115,7 +132,7 @@ function createCloudActivator(clouds, cities)
 
 	return {
 		update = function()
-			if time() - last > 1000 then
+			if time() - last > CLOUD_ACTIVATION_TIME then
 				last = time()
 				for _, c in pairs(clouds) do
 					if not c.isActive() then
@@ -131,9 +148,6 @@ function createCloudActivator(clouds, cities)
 end
 
 function createCloud(trans)
-	local cloudFriction = 0.98
-	local deactivationDistance = 10
-
 	local active = false
 	local startTime = 0
 	local lifeTime = 0
@@ -144,6 +158,74 @@ function createCloud(trans)
 	local vy = 0
 	local raining = false;
 	local growing = true;
+
+	local rainEmittimer = function(ps, params)
+		if (raining and params.nextemittime<=time()) then
+			emit_particle(ps)
+			params.nextemittime = params.nextemittime + params.speed
+		end
+		return true
+	end
+
+	local rainEmmiter = function(p, params)
+		p.x = frnd((x+10)-(x-10))+(x-10)
+		p.y = y - 10
+
+		p.vx = frnd(params.maxstartvx-params.minstartvx)+params.minstartvx
+		p.vy = frnd(params.maxstartvy-params.minstartvy)+params.minstartvy
+	end
+
+	local rainDraw = function(ps, params)
+		for key,p in pairs(ps.particles) do
+			c = math.floor(p.phase*#params.colors)+1
+			line(trans.x(p.x), trans.y(p.y), trans.x(p.x)-p.vx, trans.y(p.y)-p.vy, params.colors[c])
+		end
+	end
+
+	local rainForce = function (p, params)
+		p.vx = p.vx + params.fx
+		p.vy = p.vy + params.fy
+	end
+
+	local rainBouncezone = function(p, params)
+		if (p.y>=y+6 and p.y<=y+12) then
+			p.vx = -p.vx*params.damping
+			p.vy = -p.vy*params.damping
+		end
+	end
+
+	local ps = make_psystem(300,310, 1,2,0.5,0.5)
+	ps.autoremove = false
+	table.insert(ps.emittimers,
+		{
+			timerfunc = rainEmittimer,
+			params = {nextemittime = time(), speed = 0.0001}
+		}
+	)
+	table.insert(ps.emitters,
+		{
+			emitfunc = rainEmmiter,
+			params = { minstartvx = -0.5, maxstartvx = 0.5, minstartvy = 0, maxstartvy=0 }
+		}
+	)
+	table.insert(ps.drawfuncs,
+		{
+			drawfunc = rainDraw,
+			params = { colors = {15,13,2,13,13,2,13,2,2,15,15,15} }
+		}
+	)
+	table.insert(ps.affectors,
+		{
+			affectfunc = rainForce,
+			params = { fx = 0, fy = 0.3 }
+		}
+	)
+	table.insert(ps.affectors,
+		{
+			affectfunc = rainBouncezone,
+			params = { damping = 0.2, zoneminx = 40, zonemaxx = 200, zoneminy = 100, zonemaxy = 136 }
+		}
+	)
 
 	local updateState = function()
 		local t = lifeTime // 1000;
@@ -201,7 +283,7 @@ function createCloud(trans)
 			if not active then return end
 
 			local dist = distanceLineToPoint(startx, starty, endx, endy, x, y)
-			local power = (max(0, 100 - dist) * 0.0001) + (max(0, 10 - radius) * 0.0001)
+			local power = (max(0, 100 - dist) * CLOUD_DISTANCE_BASED_POWER) + (max(0, 10 - radius) * CLOUD_SIZE_BASED_POWER)
 			vx = (endx - startx) * power
 			vy = (endy - starty) * power
 		end,
@@ -216,21 +298,21 @@ function createCloud(trans)
 			x = (x + vx)
 			y = (y + vy)
 
-			if (x < -deactivationDistance) or (x > (MAP_MAX_X + deactivationDistance)) or
-			   (y < -deactivationDistance) or (y > (MAP_MAX_Y + deactivationDistance))
+			if (x < -CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE) or (x > (MAP_MAX_X + CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE)) or
+			   (y < -CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE) or (y > (MAP_MAX_Y + CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE))
 			then
 				active = false
 			end
 
-			vx = vx * cloudFriction
-			vy = vy * cloudFriction
+			vx = vx * CLOUD_FRICTION
+			vy = vy * CLOUD_FRICTION
 		end,
 
 		draw = function()
 			if not active then return end
 			spr(2, trans.x(x) - 16, trans.y(y) - 24, 0, 1, 0, 0, 4, 2)
-			circb(trans.x(x), trans.y(y), radius, 8)
-			if raining then	print("rain", trans.x(x - 10), trans.y(y - 3), 8) end
+			-- circb(trans.x(x), trans.y(y), radius, 8)
+			-- if raining then	print("rain", trans.x(x - 10), trans.y(y - 3), 8) end
 		end
 	}
 end
@@ -262,15 +344,15 @@ function createCity(trans, clouds, x, y)
 			for _, c in pairs(clouds) do
 				if c.isRaining() and distancePointToPoint(c.x(), c.y(), x, y) <= (radius + c.radius()) then
 					isUnderCloud = true
-					happiness = min(20, happiness + 0.01)
+					happiness = min(20, happiness + HAPPINESS_GROWTH)
 					return
 				end
 			end
 			isUnderCloud = false
-			happiness = max(0, happiness - 0.001)
+			happiness = max(0, happiness - HAPPINESS_DEGRADATION)
 
 			if nextMessageTime < time() then
-				nextMessageTime = time() + random(10000, 15000)
+				nextMessageTime = time() + random(CITY_NEXT_MESSAGE_AFTER_MIN, CITY_NEXT_MESSAGE_AFTER_MAX)
 				startMessageTime = time()
 				if happiness < 8 then
 					displayedMessage = badText[random(1, #badText)]
@@ -280,7 +362,7 @@ function createCity(trans, clouds, x, y)
 				end
 			end
 
-			if startMessageTime + 3000 < time() then
+			if startMessageTime + CITY_MESSAGE_DURATION < time() then
 				displayedMessage = nil
 			end
 		end,
@@ -374,14 +456,12 @@ function createGameScene()
 	local mouseBlower = createMouseBlower(trans, clouds)
 	local minimap = createMiniMap(trans, cities)
 
-	-- create 8 cities
-	for i = 0, 7, 1 do
+	for i = 0, CITY_COUNT - 1, 1 do
 		local x, y = getFreeCityLocation(cities)
 		cities[i] = createCity(trans, clouds, x, y)
 	end
 
-	-- create 10 clouds
-	for i = 0, 9, 1 do
+	for i = 0, CLOUD_COUNT - 1, 1 do
 		clouds[i] = createCloud(trans)
 	end
 
@@ -393,11 +473,13 @@ function createGameScene()
 			for _, c in pairs(cities) do c.update() end
 			for _, c in pairs(clouds) do c.update() end
 			minimap.update()
+			update_psystems()
 		end,
 		draw = function()
 			cls(5)
 			for _, c in pairs(cities) do c.draw() end
 			for _, c in pairs(clouds) do c.draw() end
+			draw_psystems()
 
 			-- GUI
 			for _, c in pairs(cities) do c.drawGui() end
@@ -410,9 +492,152 @@ function createGameScene()
 	}
 end
 
-scene = createGameScene()
-
 function TIC()
+	if not scene then scene = createGameScene() end
 	scene.update()
 	scene.draw()
+end
+
+
+
+
+
+
+
+--==================================================================================--
+-- PARTICLE SYSTEM LIBRARY =========================================================--
+--==================================================================================--
+
+particle_systems = {}
+
+-- Call this, to create an empty particle system, and then fill the emittimers, emitters,
+-- drawfuncs, and affectors tables with your parameters.
+function make_psystem(minlife, maxlife, minstartsize, maxstartsize, minendsize, maxendsize)
+	local ps = {
+	-- global particle system params
+
+	-- if true, automatically deletes the particle system if all of it's particles died
+	autoremove = true,
+
+	minlife = minlife,
+	maxlife = maxlife,
+
+	minstartsize = minstartsize,
+	maxstartsize = maxstartsize,
+	minendsize = minendsize,
+	maxendsize = maxendsize,
+
+	-- container for the particles
+	particles = {},
+
+	-- emittimers dictate when a particle should start
+	-- they called every frame, and call emit_particle when they see fit
+	-- they should return false if no longer need to be updated
+	emittimers = {},
+
+	-- emitters must initialize p.x, p.y, p.vx, p.vy
+	emitters = {},
+
+	-- every ps needs a drawfunc
+	drawfuncs = {},
+
+	-- affectors affect the movement of the particles
+	affectors = {},
+	}
+
+	table.insert(particle_systems, ps)
+
+	return ps
+end
+
+-- Call this to update all particle systems
+function update_psystems()
+	local timenow = time()
+	for key,ps in pairs(particle_systems) do
+		update_ps(ps, timenow)
+	end
+end
+
+-- updates individual particle systems
+-- most of the time, you don't have to deal with this, the above function is sufficient
+-- but you can call this if you want (for example fast forwarding a particle system before first draw)
+function update_ps(ps, timenow)
+	for key,et in pairs(ps.emittimers) do
+		local keep = et.timerfunc(ps, et.params)
+		if (keep==false) then
+			table.remove(ps.emittimers, key)
+		end
+	end
+
+	for key,p in pairs(ps.particles) do
+		p.phase = (timenow-p.starttime)/(p.deathtime-p.starttime)
+
+		for key,a in pairs(ps.affectors) do
+			a.affectfunc(p, a.params)
+		end
+
+		p.x = p.x + p.vx
+		p.y = p.y + p.vy
+
+		local dead = false
+		if (p.x<0 or p.x>MAP_MAX_X or p.y<0 or p.y>MAP_MAX_Y) then
+			dead = true
+		end
+
+		if (timenow>=p.deathtime) then
+			dead = true
+		end
+
+		if (dead==true) then
+			table.remove(ps.particles, key)
+		end
+	end
+
+	if (ps.autoremove==true and #ps.particles<=0) then
+		local psidx = -1
+		for pskey,pps in pairs(particle_systems) do
+			if pps==ps then
+				table.remove(particle_systems, pskey)
+				return
+			end
+		end
+	end
+end
+
+-- draw a single particle system
+function draw_ps(ps, params)
+	for key,df in pairs(ps.drawfuncs) do
+		df.drawfunc(ps, df.params)
+	end
+end
+
+-- draws all particle system
+-- This is just a convinience function, you probably want to draw the individual particles,
+-- if you want to control the draw order in relation to the other game objects for example
+function draw_psystems()
+	for key,ps in pairs(particle_systems) do
+		draw_ps(ps)
+	end
+end
+
+-- This need to be called from emitttimers, when they decide it is time to emit a particle
+function emit_particle(psystem)
+	local p = {}
+
+	local ecount = nil
+	local e = psystem.emitters[math.random(#psystem.emitters)]
+	e.emitfunc(p, e.params)
+
+	p.phase = 0
+	p.starttime = time()
+	p.deathtime = time()+frnd(psystem.maxlife-psystem.minlife)+psystem.minlife
+
+	p.startsize = frnd(psystem.maxstartsize-psystem.minstartsize)+psystem.minstartsize
+	p.endsize = frnd(psystem.maxendsize-psystem.minendsize)+psystem.minendsize
+
+	table.insert(psystem.particles, p)
+end
+
+function frnd(max)
+	return math.random()*max
 end
