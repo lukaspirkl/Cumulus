@@ -151,13 +151,14 @@ function createCloud(trans)
 	local active = false
 	local startTime = 0
 	local lifeTime = 0
-	local radius = 0
+	local radius = 10
+	local spriteIndex = 0
 	local x = 0
 	local y = 0
 	local vx = 0
 	local vy = 0
 	local raining = false;
-	local growing = true;
+	local dark = false;
 
 	local rainEmittimer = function(ps, params)
 		if (raining and params.nextemittime<=time()) then
@@ -230,16 +231,20 @@ function createCloud(trans)
 	local updateState = function()
 		local t = lifeTime // 1000;
 
-		if t < 10 then
-			radius = t
+		if t < 7 then
+			spriteIndex = t
 		elseif t < 15 then
-			radius = 10
+			spriteIndex = 7
+		elseif t < 20 then
+			dark = true
 		elseif t < 30 then
-			 raining = true
+			raining = true
 		elseif t < 35 then
 			raining = false
-		elseif t < 45 then
-			radius = 45 - t
+		elseif t < 40 then
+			dark = false
+		elseif t < 47 then
+			spriteIndex = 47 - t
 		elseif t < 51 then
 			active = false
 		end
@@ -268,7 +273,7 @@ function createCloud(trans)
 		end,
 
 		activate = function(startX, startY)
-			radius = 0
+			spriteIndex = 0
 			x = startX
 			y = startY
 			vx = 0
@@ -283,7 +288,7 @@ function createCloud(trans)
 			if not active then return end
 
 			local dist = distanceLineToPoint(startx, starty, endx, endy, x, y)
-			local power = (max(0, 100 - dist) * CLOUD_DISTANCE_BASED_POWER) + (max(0, 10 - radius) * CLOUD_SIZE_BASED_POWER)
+			local power = (max(0, 100 - dist) * CLOUD_DISTANCE_BASED_POWER) + (max(0, 10 - spriteIndex) * CLOUD_SIZE_BASED_POWER)
 			vx = (endx - startx) * power
 			vy = (endy - starty) * power
 		end,
@@ -310,9 +315,16 @@ function createCloud(trans)
 
 		draw = function()
 			if not active then return end
-			spr(2, trans.x(x) - 16, trans.y(y) - 24, 0, 1, 0, 0, 4, 2)
+			if dark then
+				spr(230, trans.x(x) - 10, trans.y(y) - 22, 0, 1, 0, 0, 3, 2)
+			else
+				if spriteIndex > 0 then
+					spr(32 * spriteIndex, trans.x(x) - 10, trans.y(y) - 22, 0, 1, 0, 0, 3, 2)
+				end
+			end
 			-- circb(trans.x(x), trans.y(y), radius, 8)
 			-- if raining then	print("rain", trans.x(x - 10), trans.y(y - 3), 8) end
+			-- print(lifeTime // 1000, 0, 0)
 		end
 	}
 end
@@ -492,8 +504,27 @@ function createGameScene()
 	}
 end
 
+function createTestScene()
+	local trans = createScreenTranslation()
+	local cloud = createCloud(trans)
+	cloud.activate(50, 50)
+	return {
+		update = function()
+			trans.update()
+			cloud.update()
+			update_psystems()
+		end,
+		draw = function()
+			cls(5)
+			cloud.draw()
+			draw_psystems()
+		end
+	}
+end
+
 function TIC()
 	if not scene then scene = createGameScene() end
+	--if not scene then scene = createTestScene() end
 	scene.update()
 	scene.draw()
 end
