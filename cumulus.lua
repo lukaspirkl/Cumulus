@@ -29,7 +29,8 @@ CITY_NEXT_MESSAGE_AFTER_MAX = 20000 --ms
 CLOUD_FRICTION = 0.98
 CLOUD_DISTANCE_BASED_POWER = 0.0001
 CLOUD_SIZE_BASED_POWER = 0.0001
-CLOUD_ACTIVATION_TIME = 2000 --ms
+CLOUD_ACTIVATION_TIME_MIN = 3000 --ms
+CLOUD_ACTIVATION_TIME_MAX = 7000 --ms
 CLOUD_OUT_OF_MAP_DEACTIVATION_DISTANCE = 30
 
 function distanceLineToPoint(x1, y1, x2, y2, xp, yp)
@@ -87,16 +88,16 @@ function createScreenTranslation()
 			end
 
 			if btn(0) then -- UP
-				curY = curY - speed
+				curY = curY - SCROLL_SPEED
 			end
 			if btn(1) then -- DOWN
-				curY = curY + speed
+				curY = curY + SCROLL_SPEED
 			end
 			if btn(2) then -- LEFT
-				curX = curX - speed
+				curX = curX - SCROLL_SPEED
 			end
 			if btn(3) then -- RIGHT
-				curX = curX + speed
+				curX = curX + SCROLL_SPEED
 			end
 
 			if curX < 0 then curX = 0 end
@@ -129,11 +130,13 @@ end
 
 function createCloudActivator(clouds, cities)
 	local last = time()
+	local activationTime = random(CLOUD_ACTIVATION_TIME_MIN, CLOUD_ACTIVATION_TIME_MAX)
 
 	return {
 		update = function()
-			if time() - last > CLOUD_ACTIVATION_TIME then
+			if time() - last > activationTime then
 				last = time()
+				activationTime = random(CLOUD_ACTIVATION_TIME_MIN, CLOUD_ACTIVATION_TIME_MAX)
 				for _, c in pairs(clouds) do
 					if not c.isActive() then
 						local city = cities[random(1,#cities)]
