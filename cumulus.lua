@@ -68,11 +68,11 @@ function createMiniMap(trans, cities)
 				if c.getHappiness() < CITY_LOW_MEDIUM_BORDER then
 					color = 6
 				elseif c.getHappiness() < CITY_MEDIUM_HIGH_BORDER then
-					color = 9
+					color = 12
 				elseif c.getHappiness() < CITY_MAX_HAPPINESS then
 					color = 14
 				else
-					color = 5
+					color = 1
 				end
 				pix((MAX_X - w) + (c.x() // 10), (MAX_Y - h) + (c.y() // 10), color)
 			end
