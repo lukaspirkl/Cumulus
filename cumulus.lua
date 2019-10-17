@@ -22,9 +22,14 @@ CLOUD_COUNT = 8
 HAPPINESS_DEGRADATION = 0.001
 HAPPINESS_GROWTH = 0.01
 
+HAPPY_CITY_COUNT_FOR_WIN = 1
+
 CITY_MESSAGE_DURATION = 3000 --ms
 CITY_NEXT_MESSAGE_AFTER_MIN = 10000 --ms
 CITY_NEXT_MESSAGE_AFTER_MAX = 20000 --ms
+CITY_LOW_MEDIUM_BORDER = 8
+CITY_MEDIUM_HIGH_BORDER = 13
+CITY_MAX_HAPPINESS = 20 -- do not change this (health bar is hardcoded to 20px)
 
 CLOUD_FRICTION = 0.98
 CLOUD_DISTANCE_BASED_POWER = 0.0001
@@ -42,6 +47,11 @@ function distancePointToPoint(x1, y1, x2, y2)
 	return sqrt(((y2-y1)^2)+((x2-x1)^2))
 end
 
+function printWithShadow(str, x, y, c)
+    print(str, x+1, y+1, 0)
+    return print(str, x, y, c)
+end
+
 function createMiniMap(trans, cities)
 	return {
 		update = function()
@@ -51,10 +61,40 @@ function createMiniMap(trans, cities)
 			local w = (MAP_MAX_X / 10)
 			local h = (MAP_MAX_Y / 10)
 			local viewX, viewY = trans.getCurrent()
-			rect(MAX_X - w, MAX_Y - h, w, h, 15)
-			rectb((MAX_X - w) + (viewX // 10), (MAX_Y - h) + (viewY // 10), (MAX_X // 10), (MAX_Y // 10) + 1, 14)
+			rect(MAX_X - w, MAX_Y - h, w, h, 11)
+			rectb((MAX_X - w) + (viewX // 10), (MAX_Y - h) + (viewY // 10), (MAX_X // 10), (MAX_Y // 10) + 1, 7)
 			for _, c in pairs(cities) do
-				pix((MAX_X - w) + (c.x() // 10), (MAX_Y - h) + (c.y() // 10), 1)
+				local color
+				if c.getHappiness() < CITY_LOW_MEDIUM_BORDER then
+					color = 6
+				elseif c.getHappiness() < CITY_MEDIUM_HIGH_BORDER then
+					color = 9
+				elseif c.getHappiness() < CITY_MAX_HAPPINESS then
+					color = 14
+				else
+					color = 5
+				end
+				pix((MAX_X - w) + (c.x() // 10), (MAX_Y - h) + (c.y() // 10), color)
+			end
+		end
+	}
+end
+
+function createCityCounter(cities)
+	return {
+		draw = function()
+			local happyCount = 0
+			for _, c in pairs(cities) do
+				if c.getHappiness() == CITY_MAX_HAPPINESS then
+					happyCount = happyCount + 1;
+				end
+			end
+			local msg = happyCount .. "/" .. HAPPY_CITY_COUNT_FOR_WIN
+			local w = print(msg, -50, -50)
+			printWithShadow(msg, MAX_X - w, 0, 15)
+
+			if happyCount >= HAPPY_CITY_COUNT_FOR_WIN then
+				scene = createWinScene()
 			end
 		end
 	}
@@ -175,8 +215,8 @@ function createCloud(trans)
 		p.x = frnd((x+10)-(x-10))+(x-10)
 		p.y = y - 10
 
-		p.vx = frnd(params.maxstartvx-params.minstartvx)+params.minstartvx
-		p.vy = frnd(params.maxstartvy-params.minstartvy)+params.minstartvy
+		p.vx = 0
+		p.vy = 0
 	end
 
 	local rainDraw = function(ps, params)
@@ -209,7 +249,7 @@ function createCloud(trans)
 	table.insert(ps.emitters,
 		{
 			emitfunc = rainEmmiter,
-			params = { minstartvx = -0.5, maxstartvx = 0.5, minstartvy = 0, maxstartvy=0 }
+			params = { }
 		}
 	)
 	table.insert(ps.drawfuncs,
@@ -227,7 +267,7 @@ function createCloud(trans)
 	table.insert(ps.affectors,
 		{
 			affectfunc = rainBouncezone,
-			params = { damping = 0.2, zoneminx = 40, zonemaxx = 200, zoneminy = 100, zonemaxy = 136 }
+			params = { damping = 0.2 }
 		}
 	)
 
@@ -355,6 +395,10 @@ function createCity(trans, clouds, x, y)
 			return y
 		end,
 
+		getHappiness = function()
+			return happiness
+		end,
+
 		update = function()
 			for _, c in pairs(clouds) do
 				if c.isRaining() and distancePointToPoint(c.x(), c.y(), x, y) <= (radius + c.radius()) then
@@ -369,10 +413,10 @@ function createCity(trans, clouds, x, y)
 			if nextMessageTime < time() then
 				nextMessageTime = time() + random(CITY_NEXT_MESSAGE_AFTER_MIN, CITY_NEXT_MESSAGE_AFTER_MAX)
 				startMessageTime = time()
-				if happiness < 8 then
+				if happiness < CITY_LOW_MEDIUM_BORDER then
 					displayedMessage = badText[random(1, #badText)]
 				end
-				if happiness > 13 then
+				if happiness > CITY_MEDIUM_HIGH_BORDER then
 					displayedMessage = goodText[random(1, #badText)]
 				end
 			end
@@ -397,8 +441,11 @@ function createCity(trans, clouds, x, y)
 
 			if displayedMessage then
 				local width = print(displayedMessage, 0, -32, 0)
-				print(displayedMessage, trans.x(x) - (width / 2) + 1, trans.y(y) - 10 + 1, 0)
-				print(displayedMessage, trans.x(x) - (width / 2), trans.y(y) - 10, 13)
+				printWithShadow(displayedMessage, trans.x(x) - (width / 2), trans.y(y) - 10, 13)
+			end
+
+			if happiness <= 0 then
+				scene = createLooseScene()
 			end
 		end
 	}
@@ -470,6 +517,7 @@ function createGameScene()
 	local activator = createCloudActivator(clouds, cities)
 	local mouseBlower = createMouseBlower(trans, clouds)
 	local minimap = createMiniMap(trans, cities)
+	local cityCounter = createCityCounter(cities)
 
 	for i = 0, CITY_COUNT - 1, 1 do
 		local x, y = getFreeCityLocation(cities)
@@ -499,6 +547,7 @@ function createGameScene()
 			-- GUI
 			for _, c in pairs(cities) do c.drawGui() end
 			minimap.draw()
+			cityCounter.draw()
 			mouseBlower.draw()
 
 			-- c = string.format("(%03i,%03i)", x, y)
@@ -525,8 +574,88 @@ function createTestScene()
 	}
 end
 
+function createWinScene()
+	local prevDown = false
+	return {
+		update = function()
+			particle_systems = {} -- to remove all remaining particle systems from ended game
+
+			local x, y, left = mouse()
+			if left then
+                if not prevLeft then
+                    prevLeft = true
+                    scene = createTitleScene()
+                end
+            else
+                prevLeft = false
+            end
+		end,
+
+		draw = function()
+			print("YOU WIN", 22, 22, 0, false, 2)
+			print("YOU WIN", 20, 20, 15, false, 2)
+			printWithShadow("click to continue", 143, 123, 15)
+		end,
+	}
+end
+
+function createLooseScene()
+	local prevDown = false
+	return {
+		update = function()
+			particle_systems = {} -- to remove all remaining particle systems from ended game
+
+			local x, y, left = mouse()
+			if left then
+                if not prevLeft then
+                    prevLeft = true
+                    scene = createTitleScene()
+                end
+            else
+                prevLeft = false
+            end
+		end,
+
+		draw = function()
+			print("YOU LOOSE", 22, 22, 0, false, 2)
+			print("YOU LOOSE", 20, 20, 15, false, 2)
+			printWithShadow("click to continue", 143, 123, 15)
+		end,
+	}
+end
+
+function createTitleScene()
+	local prevDown = false
+	return {
+		update = function()
+			local x, y, left = mouse()
+			if left then
+                if not prevLeft then
+                    prevLeft = true
+                    scene = createGameScene()
+                end
+            else
+                prevLeft = false
+            end
+		end,
+
+		draw = function()
+			cls(5)
+			print("Cumulus", 27, 22, 0, false, 4)
+			print("Cumulus", 25, 20, 15, false, 4)
+			printWithShadow("a game about blowing to the clouds", 20, 50, 15)
+            printWithShadow("Shacknews Jam: Do It IV Shacknews", 5, 107, 7)
+			printWithShadow("drakir.itch.io", 5, 115, 7)
+			printWithShadow("lowcase.itch.io", 5, 123, 7)
+			printWithShadow("click to start", 153, 123, 15)
+		end,
+	}
+end
+
 function TIC()
-	if not scene then scene = createGameScene() end
+	if not scene then scene = createTitleScene() end
+	--if not scene then scene = createGameScene() end
+	--if not scene then scene = createWinScene() end
 	--if not scene then scene = createTestScene() end
 	scene.update()
 	scene.draw()
