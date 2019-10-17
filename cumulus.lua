@@ -446,7 +446,7 @@ function createCity(trans, clouds, x, y)
 			end
 
 			if happiness <= 0 then
-				scene = createLooseScene()
+				scene = createLoseScene()
 			end
 		end
 	}
@@ -595,12 +595,17 @@ function createWinScene()
 		draw = function()
 			print("YOU WIN", 22, 22, 0, false, 2)
 			print("YOU WIN", 20, 20, 15, false, 2)
+
+			printWithShadow("Your favourite village is thriving", 5, 70, 15)
+			printWithShadow("and the others suffer a lot.", 13, 78, 15)
+			printWithShadow("Splendid. Splendid indeed.", 5, 94, 15)
+
 			printWithShadow("click to continue", 143, 123, 15)
 		end,
 	}
 end
 
-function createLooseScene()
+function createLoseScene()
 	local prevDown = false
 	return {
 		update = function()
@@ -618,8 +623,13 @@ function createLooseScene()
 		end,
 
 		draw = function()
-			print("YOU LOOSE", 22, 22, 0, false, 2)
-			print("YOU LOOSE", 20, 20, 15, false, 2)
+			print("YOU LOSE", 22, 22, 0, false, 2)
+			print("YOU LOSE", 20, 20, 15, false, 2)
+
+			printWithShadow("- Without rain, a village died from thirst", 5, 70, 15)
+			printWithShadow("- Keep them alive by sending them a rainy", 5, 78, 15)
+			printWithShadow("cloud once in a while", 13, 86, 15)
+
 			printWithShadow("click to continue", 143, 123, 15)
 		end,
 	}
@@ -644,7 +654,12 @@ function createTitleScene()
 			cls(5)
 			print("Cumulus", 27, 22, 0, false, 4)
 			print("Cumulus", 25, 20, 15, false, 4)
-			printWithShadow("a game about blowing to the clouds", 20, 50, 15)
+			printWithShadow("a game about blowing the clouds", 20, 50, 15)
+
+			printWithShadow("- completely irrigate a village by rain", 5, 70, 7)
+			printWithShadow("- blow onto clouds using mouse", 5, 78, 7)
+			printWithShadow("- do not make others die from thirst", 5, 86, 7)
+
             printWithShadow("Shacknews Jam: Do It IV Shacknews", 5, 107, 7)
 			printWithShadow("drakir.itch.io", 5, 115, 7)
 			printWithShadow("lowcase.itch.io", 5, 123, 7)
@@ -657,6 +672,7 @@ function TIC()
 	if not scene then scene = createTitleScene() end
 	--if not scene then scene = createGameScene() end
 	--if not scene then scene = createWinScene() end
+	--if not scene then scene = createLoseScene() end
 	--if not scene then scene = createTestScene() end
 	scene.update()
 	scene.draw()
