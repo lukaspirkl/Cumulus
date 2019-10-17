@@ -427,12 +427,13 @@ function createCity(trans, clouds, x, y)
 		end,
 
 		draw = function()
-			-- if isUnderCloud then
-			-- 	circ(trans.x(x), trans.y(y), radius, 3)
-			-- else
-			-- 	circ(trans.x(x), trans.y(y), radius, 1)
-			-- end
-			spr(0, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+			if happiness < CITY_LOW_MEDIUM_BORDER then
+				spr(0, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+			elseif happiness < CITY_MEDIUM_HIGH_BORDER then
+				spr(2, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+			else
+				spr(4, trans.x(x) - 8, trans.y(y) - 8, 0, 1, 0, 0, 2, 2)
+			end
 		end,
 
 		drawGui = function()
