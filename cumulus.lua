@@ -585,7 +585,8 @@ function createWinScene()
 			if left then
                 if not prevLeft then
                     prevLeft = true
-                    scene = createTitleScene()
+					HAPPY_CITY_COUNT_FOR_WIN = HAPPY_CITY_COUNT_FOR_WIN + 1
+                    scene = createGameScene()
                 end
             else
                 prevLeft = false
@@ -615,6 +616,7 @@ function createLoseScene()
 			if left then
                 if not prevLeft then
                     prevLeft = true
+					HAPPY_CITY_COUNT_FOR_WIN = 1
                     scene = createTitleScene()
                 end
             else
