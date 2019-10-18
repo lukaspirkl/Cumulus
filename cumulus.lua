@@ -21,6 +21,7 @@ CLOUD_COUNT = 8
 
 HAPPINESS_DEGRADATION = 0.001
 HAPPINESS_GROWTH = 0.01
+HAPPINESS_BUFFER = 1
 
 HAPPY_CITY_COUNT_FOR_WIN = 1
 
@@ -85,7 +86,7 @@ function createCityCounter(cities)
 		draw = function()
 			local happyCount = 0
 			for _, c in pairs(cities) do
-				if c.getHappiness() == CITY_MAX_HAPPINESS then
+				if c.getHappiness() >= CITY_MAX_HAPPINESS then
 					happyCount = happyCount + 1;
 				end
 			end
@@ -403,7 +404,7 @@ function createCity(trans, clouds, x, y)
 			for _, c in pairs(clouds) do
 				if c.isRaining() and distancePointToPoint(c.x(), c.y(), x, y) <= (radius + c.radius()) then
 					isUnderCloud = true
-					happiness = min(20, happiness + HAPPINESS_GROWTH)
+					happiness = min(20 + HAPPINESS_BUFFER, happiness + HAPPINESS_GROWTH)
 					return
 				end
 			end
@@ -584,7 +585,7 @@ function createWinScene()
 			local x, y, left = mouse()
 			if left then
                 if not prevLeft then
-                    prevLeft = true
+					prevLeft = true
 					HAPPY_CITY_COUNT_FOR_WIN = HAPPY_CITY_COUNT_FOR_WIN + 1
                     scene = createGameScene()
                 end
@@ -597,7 +598,7 @@ function createWinScene()
 			print("YOU WIN", 22, 22, 0, false, 2)
 			print("YOU WIN", 20, 20, 15, false, 2)
 
-			printWithShadow("Your favourite village is thriving", 5, 70, 15)
+			printWithShadow("Your favourites thrive", 5, 70, 15)
 			printWithShadow("and the others suffer a lot.", 13, 78, 15)
 			printWithShadow("Splendid. Splendid indeed.", 5, 94, 15)
 
@@ -615,7 +616,7 @@ function createLoseScene()
 			local x, y, left = mouse()
 			if left then
                 if not prevLeft then
-                    prevLeft = true
+					prevLeft = true
 					HAPPY_CITY_COUNT_FOR_WIN = 1
                     scene = createTitleScene()
                 end
