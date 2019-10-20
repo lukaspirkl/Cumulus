@@ -13,14 +13,14 @@ Careful though - you don't want anyone to die. Just show them who's the boss. Th
 * Click and drag the **right mouse button** to **move** your screen around.
 
 ## Objective
-* Provide abundance of rain water to one village - the number of villages will increase in the next round
-* Don't make any village die of thirst by not providing them any rain drops
+* Provide abundance of rain water to one village - the number of villages will increase in the next round.
+* Don't make any village die of thirst by not providing them any rain drops.
 
 ## Interface
 * There are many villages on the map that are constantly drinking their reserves of water - shown in the red/green bar bellow the village.
 If the village is thirsty, the bar will be mostly red. If they have plenty of water, their bar will be green.
-* There are many cloud constantly appearing and disappearing on the map - they grow, rain and then get smaller again
+* There are many clouds constantly appearing and disappearing on the map - they grow, rain and then get smaller again.
 * There is a minimap in the bottom right corner, that shows you locations of all the villages - their colors shifting based on their water
-supply
+supply.
 * There is a progress at the top right corner showing you how many villages you are supposed to make happy by providing them enough rain
 water and of course how many are currently happy.
