@@ -16,14 +16,14 @@ MAP_MAX_Y = 300
 
 SCROLL_SPEED = 4
 
-CITY_COUNT = 10
+HAPPY_CITY_COUNT_FOR_WIN = 1
+CITY_COUNT = HAPPY_CITY_COUNT_FOR_WIN + 2
 CLOUD_COUNT = 8
 
 HAPPINESS_DEGRADATION = 0.001
 HAPPINESS_GROWTH = 0.01
 HAPPINESS_BUFFER = 1
 
-HAPPY_CITY_COUNT_FOR_WIN = 1
 
 CITY_MESSAGE_DURATION = 3000 --ms
 CITY_NEXT_MESSAGE_AFTER_MIN = 10000 --ms
@@ -586,7 +586,8 @@ function createWinScene()
 			if left then
                 if not prevLeft then
                     prevLeft = true
-                    HAPPY_CITY_COUNT_FOR_WIN = HAPPY_CITY_COUNT_FOR_WIN + 1
+					HAPPY_CITY_COUNT_FOR_WIN = HAPPY_CITY_COUNT_FOR_WIN + 1
+					CITY_COUNT = HAPPY_CITY_COUNT_FOR_WIN + 2
                     scene = createGameScene()
                 end
             else
@@ -617,7 +618,8 @@ function createLoseScene()
 			if left then
                 if not prevLeft then
                     prevLeft = true
-                    HAPPY_CITY_COUNT_FOR_WIN = 1
+					HAPPY_CITY_COUNT_FOR_WIN = 1
+					CITY_COUNT = HAPPY_CITY_COUNT_FOR_WIN + 2
                     scene = createTitleScene()
                 end
             else
